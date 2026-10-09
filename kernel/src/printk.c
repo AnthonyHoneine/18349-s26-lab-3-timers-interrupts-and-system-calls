@@ -10,13 +10,12 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <uart.h>
-#include <uart_polling.h>
 
 
 /**
  * allows for numbers with 64 digits/letters
  */
-#define MAXBUF ( sizeof( uint32_t ) )
+#define MAXBUF 33  /* Enough for 32 binary digits and a terminator. */
 
 /**
  * static array of digits for use in printnum(s)
@@ -24,8 +23,9 @@
 static char digits[] = "0123456789abcdef";
 
 void uart_wrapper ( char c ) {
-  // @TODO change to interrupt based put byte
-  uart_polling_put_byte( c );
+  while (uart_put_byte(c) != 0) {
+    /* Wait for the interrupt-driven transmitter to free buffer space. */
+  }
 
 }
 
@@ -98,7 +98,7 @@ int printk( const char *fmt, ... ) {
 
       if ( num < 0 ) {
         uart_wrapper( '-' );
-        printnumk( 10, -num );
+        printnumk( 10, (uint32_t)(-(int64_t)num) );
       }
       else {
         printnumk( 10, num );

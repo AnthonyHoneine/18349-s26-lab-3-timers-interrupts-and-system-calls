@@ -13,6 +13,11 @@
 
 void uart_init(int baud);
 
+void uart_flush(void);
+void USART2_IRQHandler(void);
+void USART2_TX_IRQHandler(void);
+void USART2_RX_IRQHandler(void);
+
 int uart_put_byte(char c);
 
 int uart_get_byte(char *c);
