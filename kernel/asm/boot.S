@@ -14,11 +14,11 @@
 
 .global ivt
 ivt:
-.word   0                   /* stack top address */
-.word   0                   /* 1 Reset */
+.word   __msp_stack_top     /* stack top address */
+.word   _reset_             /* 1 Reset */
 .word   _nmi_               /* 2 NMI */
 .word   _hard_fault_        /* 3 Hard Fault */
-.word   spin                /* 4 MM Fault */
+.word   _mm_fault_          /* 4 MM Fault */
 .word   _bus_fault_         /* 5 Bus Fault */
 .word   _usage_fault_       /* 6 Usage Fault */
 .word   spin                /* 7 RESERVED */
@@ -28,7 +28,7 @@ ivt:
 .word   _svc_asm_handler_   /* 11 SV call */
 .word   spin                /* 12 Debug reserved */
 .word   spin                /* 13 RESERVED */
-.word   spin                /* 14 PendSV */
+.word   _pend_sv_           /* 14 PendSV */
 .word   systick_c_handler   /* 15 SysTick */
 .word   spin                /* 16 IRQ0 Window Watchdog Interrupt */
 .word   spin                /* 17 IRQ1 PVD */
@@ -58,9 +58,9 @@ ivt:
 .word   spin                /* 41 IRQ25 TIM1_UP */
 .word   spin                /* 42 IRQ26 TIM1_TRG_COM */
 .word   spin                /* 43 IRQ27 TIM1_CC   */
-.word   spin                /* 44 IRQ28 TIM2   */
-.word   spin                /* 45 IRQ29 TIM3 */
-.word   spin                /* 46 IRQ30 TIM5 */
+.word   tim2_c_handler      /* 44 IRQ28 TIM2   */
+.word   tim3_c_handler      /* 45 IRQ29 TIM3 */
+.word   tim4_c_handler      /* 46 IRQ30 TIM4 */
 .word   spin                /* 47 IRQ31 I2C1_EV   */
 .word   spin                /* 48 IRQ32 I2C1_ER   */
 .word   spin                /* 49 IRQ33 I2C2_EV */
@@ -80,7 +80,7 @@ ivt:
 .word   spin                /* 63 IRQ47 RESERVED   */
 .word   spin                /* 64 IRQ48 RESERVED   */
 .word   spin                /* 65 IRQ49 RESERVED */
-.word   spin                /* 66 IRQ50 TIM5 */
+.word   tim5_c_handler      /* 66 IRQ50 TIM5 */
 .word   spin                /* 67 IRQ51 SPI3   */
 .word   spin                /* 68 IRQ52 UART4   */
 .word   spin                /* 69 IRQ53 UART5 */
@@ -111,20 +111,62 @@ _nmi_ : bkpt
 _hard_fault_ : bkpt
 
 .thumb_func
+_mm_fault_ : bkpt
+
+.thumb_func
 _bus_fault_ : bkpt
 
 .thumb_func
 _usage_fault_ : bkpt
 
 .thumb_func
+_pend_sv_ :
+  bkpt
+
+.thumb_func
+_spi1_handler:
+  bkpt
+  
+.thumb_func
 .global _reset_
-_reset_:
+/*_reset_: 
+  bl kernel_main
+  b  sys_exit */
+_reset_: /* dk how correct this is */
+@ Write your boot loader here!
+  LDR R0, =_erodata   /* Flash start */
+  LDR R1, =_k_data    /* SRAM start */
+  LDR R2, =_u_data    /* SRAM end */
+copy_flash:
+  CMP R1, R2          /* check if we are at the end */
+  BHS bss_init
+  LDR R3, [R0]        /* get value in flash */
+  STR R3, [R1]        /* store to sram */
+  ADDS R0, R0, #4     /* Go to next address */
+  ADDS R1, R1, #4
+  B copy_flash
+bss_init:
+  EOR R0, R0
+  LDR R1, =_bss_start /* bss start */
+  LDR R2, =_u_ebss    /* bss end */
+set_bss:
+  CMP R1, R2
+  BHS start_kernel
+  STR R0, [R1]        /* set to 0 */
+  ADDS R1, R1, #4     /* go to next bss address */
+  B set_bss
+start_kernel:
   bl kernel_main
   b  sys_exit
 
 .thumb_func
+.global _sys_tick_asm_
+_sys_tick_asm_:
+  bkpt
+
+.thumb_func
 .global _svc_asm_handler_
 _svc_asm_handler_:
-  mrs r0, psp             // build exception stack frame
+  mrs r0, psp             ; build exception stack frame
   b svc_c_handler
   

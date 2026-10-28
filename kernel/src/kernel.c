@@ -6,8 +6,9 @@
 #include <unistd.h>
 #include <lcd_driver.h>
 #include <keypad_driver.h>
-#include <adc.h>
+// #include <adc.h>
 #include <systick.h>
+#include <timer.h>
 
 int kernel_main(void) {
     uint8_t row = 0;
@@ -17,10 +18,14 @@ int kernel_main(void) {
     uart_init(115200);
     systick_init(); /* Must precede LCD's systick_delay calls. */
     keypad_init();
-    adc_init();
+    // adc_init();
     lcd_driver_init();
 
     last_print = systick_get_ticks();
+
+    // blink LED every second
+    timer_init(2, 16000, 1000);
+    // gpio_init LED, actual blinking in tim2_c_handler
 
     while (1) {
         char c = keypad_read();

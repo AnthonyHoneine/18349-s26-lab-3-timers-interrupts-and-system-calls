@@ -20,12 +20,14 @@ _start:
 
 .global _sbrk
 _sbrk:
-  bkpt
+  svc SVC_SBRK
+  bx lr
 
 .global _write
 _write:
-  bkpt
-
+  svc SVC_WRITE
+  bx lr
+  
 .global _close
 _close:
   bkpt
@@ -44,7 +46,8 @@ _lseek:
 
 .global _read
 _read:
-  bkpt
+  svc SVC_READ
+  bx lr
 
 .global _gettimeofday
 _gettimeofday:
@@ -64,8 +67,9 @@ _kill:
 
 .global _exit
 _exit:
-  bkpt
-
+  svc SVC_EXIT
+  bx lr
+  
 .global servo_enable
 servo_enable:
   bkpt
