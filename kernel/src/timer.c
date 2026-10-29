@@ -12,6 +12,10 @@
 #include <timer.h>
 #include <rcc.h>
 #include <nvic.h>
+#include <gpio.h>
+
+extern volatile uint8_t servo_active[2];
+extern volatile uint8_t servo_angle[2];
 
 #define UNUSED __attribute__((unused))
 
@@ -48,7 +52,7 @@ void timer_init(int timer, uint32_t prescalar, uint32_t period) {
   struct rcc_reg_map *rcc = (struct rcc_reg_map *)RCC_BASE;
   rcc->apb1_enr |= (1 << (timer-2)); // bits 0-3 for tim2-5
 
-  struct tim2_5 *tim = timer_bse[timer];
+  struct tim2_5 *tim = timer_base[timer];
   tim->psc = prescalar - 1; // ck_cnt=f_ck/(psc[15:0] + 1)
   tim->arr = period;
   // interrupt event is automatically generated when this is enabled
@@ -91,7 +95,28 @@ void timer_clear_interrupt_bit(int timer) {
 
 void tim2_c_handler(void) {
   // blink led gpio
+  // gpio_set(GPIO_A, 0);
   timer_clear_interrupt_bit(2);
+
+  static uint32_t tick_counter = 0;
+
+  if (servo_active[0]) {
+    if (tick_counter == 0) {
+      gpio_set(GPIO_A, 1);
+    } else if (tick_counter == (uint32_t)(60 + servo_angle[0])) {
+      gpio_clr(GPIO_A, 1);
+    }
+  }
+  if (servo_active[1]) {
+    if (tick_counter == 0) {
+      gpio_set(GPIO_B, 0);
+    } else if (tick_counter == (uint32_t)(60 + servo_angle[1])) {
+      gpio_clr(GPIO_B, 0);
+    }
+  }
+
+  tick_counter++;
+  if (tick_counter >= 2000) tick_counter = 0;
 }
 void tim3_c_handler(void) {
   timer_clear_interrupt_bit(3);

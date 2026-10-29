@@ -10,6 +10,10 @@
 
 #include <unistd.h>
 #include <syscall.h>
+#include <uart.h>
+#include <printk.h>
+#include <stdio.h>
+#include <lcd_driver.h>
 
 #define UNUSED __attribute__((unused))
 
@@ -42,7 +46,7 @@ int sys_read(int file, char *ptr, int len){
   char c;
 
   while (bytes_read < len) {
-    while (uart_get_bytes(&c) != 0);
+    while (uart_get_byte(&c) != 0);
 
     switch (c) {
     case 4:
@@ -54,6 +58,7 @@ int sys_read(int file, char *ptr, int len){
         uart_put_byte(' ');
         uart_put_byte('\b');
       }
+      break;
     case '\r': //fall through
     case '\n':
       bytes_read++;

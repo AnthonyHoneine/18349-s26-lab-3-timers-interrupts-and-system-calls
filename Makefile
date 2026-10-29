@@ -229,7 +229,7 @@ $(K_OBJ_PROJ_DIR)/%.o: $(K_BOOT_DIR)/%.S
 
 $(U_OBJ_PROJ_DIR)/%.o: $(U_COMMON_SRC_DIR)/%.c
 	@printf "\n$y$bCompiling: $<$n$n\n"
-	python util/generate_argv.py /tmp/349_arg.h $(USER_ARG)
+	python3 util/generate_argv.py /tmp/349_arg.h $(USER_ARG)
 	$(CC) $(U_CCFLAGS) -c -I$(U_COMMON_INC_DIR) -c $< -o $@
 
 $(U_OBJ_PROJ_DIR)/%.o: $(U_BOOT_DIR)/%.S

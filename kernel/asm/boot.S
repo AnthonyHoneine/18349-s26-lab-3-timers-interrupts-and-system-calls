@@ -167,6 +167,6 @@ _sys_tick_asm_:
 .thumb_func
 .global _svc_asm_handler_
 _svc_asm_handler_:
-  mrs r0, psp             ; build exception stack frame
+  mrs r0, psp             /* build exception stack frame */
   b svc_c_handler
   

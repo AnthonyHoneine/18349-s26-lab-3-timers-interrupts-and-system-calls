@@ -18,6 +18,7 @@ void svc_c_handler(uint32_t *psp) {
   // uint32_t *psp = (uint32_t *)__get_PSP(); // prog man p59
   uint32_t banked_pc = psp[6];
   uint16_t instr = ((uint16_t *)banked_pc)[-1];
+  uint8_t svc_number = instr & 0xff;
   switch ( svc_number ) {
     case 0:
       psp[0] = (uint32_t)sys_sbrk((int)psp[0]);

@@ -9,12 +9,15 @@
 // #include <adc.h>
 #include <systick.h>
 #include <timer.h>
+#include <arm.h>
+#include <kernel.h>
 
 int kernel_main(void) {
     uint8_t row = 0;
     uint8_t col = 0;
     uint32_t last_print;
 
+    init_349();
     uart_init(115200);
     systick_init(); /* Must precede LCD's systick_delay calls. */
     keypad_init();
@@ -24,10 +27,19 @@ int kernel_main(void) {
     last_print = systick_get_ticks();
 
     // blink LED every second
-    timer_init(2, 16000, 1000);
+    timer_init(2, 160, 1);
     // gpio_init LED, actual blinking in tim2_c_handler
+    gpio_init(GPIO_A, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL, 
+        OUTPUT_SPEED_VERY_HIGH, PUPD_NONE, 0);
 
+    // gpio init servo pins
+    gpio_init(GPIO_A, 1, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL,
+        OUTPUT_SPEED_LOW, PUPD_NONE, 0);
+    gpio_init(GPIO_B, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL,
+        OUTPUT_SPEED_LOW, PUPD_NONE, 0);
+    enter_user_mode();
     while (1) {
+        gpio_clr(GPIO_A, 0);
         char c = keypad_read();
         if (c != '\0') { /* Do not display a null/no-key result. */
             switch (c) {
@@ -61,5 +73,6 @@ int kernel_main(void) {
             last_print = now;
             printk("Interrupt!\n");
         }
+        for (int i = 0; i < 10000; i++);
     }
 }
