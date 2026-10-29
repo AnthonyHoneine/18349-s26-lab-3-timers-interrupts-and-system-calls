@@ -37,7 +37,7 @@ int sys_write(int file, char *ptr, int len){
   for (int i = 0; i < len; i++) {
     while (uart_put_byte(ptr[i]) != 0);
   }
-  return 0;
+  return len;
 }
 
 int sys_read(int file, char *ptr, int len){
@@ -61,13 +61,13 @@ int sys_read(int file, char *ptr, int len){
       break;
     case '\r': //fall through
     case '\n':
-      bytes_read++;
       ptr[bytes_read] = '\n';
+      bytes_read++;
       uart_put_byte('\n');
       return bytes_read;
     default:
-      bytes_read++;
       ptr[bytes_read] = c;
+      bytes_read++;
       uart_put_byte(c);
       break;
     }

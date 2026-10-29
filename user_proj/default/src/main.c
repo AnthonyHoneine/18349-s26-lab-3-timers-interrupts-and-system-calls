@@ -22,23 +22,29 @@ int delay(int status) {
 int main(UNUSED int argc, UNUSED char const *argv[]){
   char buf[16];
   // int status;
-  int channel, angle;
+  uint8_t channel, angle;
   printf("Welcome to Servo Controller!\n"
           "Commands\n"
           "enable <ch>: Enable servo channel\n"
           "disable <ch>: Disable servo channel\n"
           "set <ch> <angle>: Set servo angle\n");
+  fflush(stdout);
   while( 1 ){
+    printf("> ");
+    fflush(stdout);
     int len = sys_read(0, buf, sizeof(buf) - 1);
     if (len > 0) {
       buf[len] = '\0';
       
-      if (sscanf(buf, "enable %d", &channel) == 1) {
-        sys_servo_enable(channel, TRUE);
-      } else if (sscanf(buf, "disable %d", &channel) == 1) {
-        sys_servo_enable(channel, FALSE);
-      } else if (sscanf(buf, "set %d %d", &channel, &angle) == 1) {
-        sys_servo_set(channel, angle);
+      if (sscanf(buf, "enable %hhu", &channel) == 1) {
+        if (channel > 1) printf("Invalid command\n");
+        else sys_servo_enable(channel, TRUE);
+      } else if (sscanf(buf, "disable %hhu", &channel) == 1) {
+        if (channel > 1) printf("Invalid command\n");
+        else sys_servo_enable(channel, FALSE);
+      } else if (sscanf(buf, "set %hhu %hhu", &channel, &angle) == 2) {
+        if (angle > 180 || channel > 1) printf("Invalid command\n");
+        else sys_servo_set(channel, angle);
       } else {
         printf("Invalid command\n");
       }

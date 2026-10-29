@@ -27,7 +27,6 @@ int kernel_main(void) {
     last_print = systick_get_ticks();
 
     // blink LED every second
-    timer_init(2, 160, 1);
     // gpio_init LED, actual blinking in tim2_c_handler
     gpio_init(GPIO_A, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL, 
         OUTPUT_SPEED_VERY_HIGH, PUPD_NONE, 0);
@@ -37,6 +36,7 @@ int kernel_main(void) {
         OUTPUT_SPEED_LOW, PUPD_NONE, 0);
     gpio_init(GPIO_B, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL,
         OUTPUT_SPEED_LOW, PUPD_NONE, 0);
+    timer_init(2, 80, 1);
     enter_user_mode();
     while (1) {
         gpio_clr(GPIO_A, 0);
