@@ -1,14 +1,5 @@
-/**
- * @file
- *
- * @brief
- *
- * @date
- *
- * @author
- */
-
-#include <unistd.h>
+/** @file timer.c @brief TIM2-TIM5 general-purpose timers and servo ISR. */
+#include <stdint.h>
 #include <timer.h>
 #include <rcc.h>
 #include <nvic.h>
@@ -17,113 +8,123 @@
 extern volatile uint8_t servo_active[2];
 extern volatile uint8_t servo_angle[2];
 
-#define UNUSED __attribute__((unused))
-
-/** @brief tim2_5 */
 struct tim2_5 {
-  volatile uint32_t cr1; /**< 00 Control Register 1 */
-  volatile uint32_t cr2; /**< 04 Control Register 2 */
-  volatile uint32_t smcr; /**< 08 Slave Mode Control */
-  volatile uint32_t dier; /**< 0C DMA/Interrupt Enable */
-  volatile uint32_t sr; /**< 10 Status Register */
-  volatile uint32_t egr; /**< 14 Event Generation */
-  volatile uint32_t ccmr[2]; /**< 18-1C Capture/Compare Mode */
-  volatile uint32_t ccer; /**< 20 Capture/Compare Enable */
-  volatile uint32_t cnt; /**< 24 Counter Register */
-  volatile uint32_t psc; /**< 28 Prescaler Register */
-  volatile uint32_t arr; /**< 2C Auto-Reload Register */
-  volatile uint32_t reserved_1; /**< 30 */
-  volatile uint32_t ccr[4]; /**< 34-40 Capture/Compare */
-  volatile uint32_t reserved_2; /**< 44 */
-  volatile uint32_t dcr; /**< 48 DMA Control Register */
-  volatile uint32_t dmar; /**< 4C DMA address for full transfer Register */
-  volatile uint32_t or; /**< 50 Option Register */
+    volatile uint32_t cr1, cr2, smcr, dier, sr, egr;
+    volatile uint32_t ccmr[2], ccer, cnt, psc, arr, reserved_1;
+    volatile uint32_t ccr[4], reserved_2, dcr, dmar, or;
 };
 
-struct tim2_5* const timer_base[] = {(void *)0x0,   // N/A - Don't fill out
-                                     (void *)0x0,   // N/A - Don't fill out
-                                     (void *)0x40000000,    // TODO: fill out address for TIMER 2
-                                     (void *)0x40000400,    // TODO: fill out address for TIMER 3
-                                     (void *)0x40000800,    // TODO: fill out address for TIMER 4
-                                     (void *)0x40000C00};   // TODO: fill out address for TIMER 5
-
+static struct tim2_5 *const timer_base[] = {
+    (void *)0, (void *)0, (void *)0x40000000u,
+    (void *)0x40000400u, (void *)0x40000800u, (void *)0x40000C00u
+};
+static const uint8_t timer_irq[] = {0u, 0u, 28u, 29u, 30u, 50u};
+#define TIM_CEN  (1u << 0)
+#define TIM_UIE  (1u << 0)
+#define TIM_UIF  (1u << 0)
+#define TIM_UG   (1u << 0)
+#define SERVO_FRAME_US 20000u
+#define SERVO_MIN_US 600u
 
 void timer_init(int timer, uint32_t prescalar, uint32_t period) {
-  struct rcc_reg_map *rcc = (struct rcc_reg_map *)RCC_BASE;
-  rcc->apb1_enr |= (1 << (timer-2)); // bits 0-3 for tim2-5
-
-  struct tim2_5 *tim = timer_base[timer];
-  tim->psc = prescalar - 1; // ck_cnt=f_ck/(psc[15:0] + 1)
-  tim->arr = period;
-  // interrupt event is automatically generated when this is enabled
-  tim->dier |= 1; // update interrupt enable
-  tim->cr1 |= 1; // enable counter
-
-  int irq_num = 0;
-  switch (timer) {
-    case 2: 
-      irq_num = 28;
-      break;
-    case 3: 
-      irq_num = 29;
-      break;
-    case 4: 
-      irq_num = 30;
-      break;
-    case 5: 
-      irq_num = 50;
-      break;
-  }
-
-  if (irq_num > 0) {
-    nvic_irq(irq_num, IRQ_ENABLE);
-  }
+    if (timer < 2 || timer > 5 || prescalar == 0u ||
+        prescalar > 65536u || period == 0u) return;
+    if ((timer == 3 || timer == 4) && period > 65536u) return;
+    struct rcc_reg_map *rcc = RCC_BASE;
+    rcc->apb1_enr |= (1u << (timer - 2));
+    (void)rcc->apb1_enr;
+    struct tim2_5 *t = timer_base[timer];
+    t->cr1 = 0u;
+    t->dier = 0u;
+    t->psc = prescalar - 1u;
+    t->arr = period - 1u;
+    t->cnt = 0u;
+    t->egr = TIM_UG; /* Update loads PSC immediately. */
+    t->sr = 0u;      /* Clear UIF produced by UG. */
+    nvic_clear_pending(timer_irq[timer]);
+    nvic_irq(timer_irq[timer], IRQ_ENABLE);
+    t->dier = TIM_UIE;
+    t->cr1 = TIM_CEN;
 }
 
 void timer_disable(int timer) {
-  struct rcc_reg_map *rcc = (struct rcc_reg_map *)RCC_BASE;
-  rcc->apb1_enr &= ~(1 << (timer-2));
-
-  struct tim2_5 *t = timer_base[timer];
-  t->cr1 &= ~1;
+    if (timer < 2 || timer > 5) return;
+    struct tim2_5 *t = timer_base[timer];
+    t->dier &= ~TIM_UIE;
+    t->cr1 &= ~TIM_CEN;
+    nvic_irq(timer_irq[timer], IRQ_DISABLE);
+    struct rcc_reg_map *rcc = RCC_BASE;
+    rcc->apb1_enr &= ~(1u << (timer - 2));
 }
 
 void timer_clear_interrupt_bit(int timer) {
-  struct tim2_5 *t = timer_base[timer];
-  t->sr &= ~1; // clear interrupt flag (dk if read only)
+    if (timer < 2 || timer > 5) return;
+    /* TIM status bits are rc_w0: write 0 to UIF, 1 to others. */
+    timer_base[timer]->sr = ~TIM_UIF;
 }
 
+/* Event-driven software PWM: at most 3 TIM2 updates per 20ms frame.
+ * At 1MHz, 1 timer count is 1us. No high-rate busy ISR is necessary. */
 void tim2_c_handler(void) {
-  // blink led gpio
-  // gpio_set(GPIO_A, 0);
-  timer_clear_interrupt_bit(2);
-
-  static uint32_t tick_counter = 0;
-
-  if (servo_active[0]) {
-    if (tick_counter == 0) {
-      gpio_set(GPIO_A, 1);
-    } else if (tick_counter == (uint32_t)(60 + servo_angle[0])) {
-      gpio_clr(GPIO_A, 1);
+    static uint8_t phase = 0u; /* 0=start frame, 1=first fall, 2=second fall */
+    static uint32_t first_width, second_width;
+    static uint8_t first_ch, second_ch, second_needed;
+    struct tim2_5 *t = timer_base[2];
+    uint32_t next_us;
+    timer_clear_interrupt_bit(2);
+    if (phase == 0u) {
+        uint32_t w0 = SERVO_MIN_US + (uint32_t)servo_angle[0] * 10u;
+        uint32_t w1 = SERVO_MIN_US + (uint32_t)servo_angle[1] * 10u;
+        uint8_t a0 = servo_active[0];
+        uint8_t a1 = servo_active[1];
+        if (a0) gpio_set(GPIO_A, 1); else gpio_clr(GPIO_A, 1);
+        if (a1) gpio_set(GPIO_B, 0); else gpio_clr(GPIO_B, 0);
+        if (!a0 && !a1) {
+            next_us = SERVO_FRAME_US;
+        } else {
+            /* Sort active falling edges. */
+            if (a0 && (!a1 || w0 <= w1)) {
+                first_ch = 0u; first_width = w0;
+                second_ch = 1u; second_width = w1;
+                second_needed = a1 && w1 > w0;
+            } else {
+                first_ch = 1u; first_width = w1;
+                second_ch = 0u; second_width = w0;
+                second_needed = a0 && w0 > w1;
+            }
+            phase = 1u;
+            next_us = first_width;
+        }
+    } else if (phase == 1u) {
+        if (first_ch == 0u) gpio_clr(GPIO_A, 1);
+        else gpio_clr(GPIO_B, 0);
+        if (second_needed) {
+            phase = 2u;
+            next_us = second_width - first_width;
+        } else {
+            /* Also clear the channel with an identical pulse width. */
+            if (servo_active[0] && servo_active[1] && !second_needed) {
+                if (first_ch == 0u) gpio_clr(GPIO_B, 0);
+                else gpio_clr(GPIO_A, 1);
+            }
+            phase = 0u;
+            next_us = SERVO_FRAME_US - first_width;
+        }
+    } else {
+        if (second_ch == 0u) gpio_clr(GPIO_A, 1);
+        else gpio_clr(GPIO_B, 0);
+        phase = 0u;
+        next_us = SERVO_FRAME_US - second_width;
     }
-  }
-  if (servo_active[1]) {
-    if (tick_counter == 0) {
-      gpio_set(GPIO_B, 0);
-    } else if (tick_counter == (uint32_t)(60 + servo_angle[1])) {
-      gpio_clr(GPIO_B, 0);
-    }
-  }
-
-  tick_counter++;
-  if (tick_counter >= 2000) tick_counter = 0;
+    /* Program next interrupt, taking immediate PSC/ARR effect via UG.
+     * UG sets UIF, which must be cleared before returning. */
+    t->cr1 &= ~TIM_CEN;
+    t->arr = next_us - 1u;
+    t->cnt = 0u;
+    t->egr = TIM_UG;
+    t->sr = 0u;
+    t->cr1 |= TIM_CEN;
 }
-void tim3_c_handler(void) {
-  timer_clear_interrupt_bit(3);
-}
-void tim4_c_handler(void) {
-  timer_clear_interrupt_bit(4);
-}
-void tim5_c_handler(void) {
-  timer_clear_interrupt_bit(5);
-}
+void tim3_c_handler(void) { timer_clear_interrupt_bit(3); }
+void tim4_c_handler(void) { timer_clear_interrupt_bit(4); }
+void tim5_c_handler(void) { timer_clear_interrupt_bit(5); }

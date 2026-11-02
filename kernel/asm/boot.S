@@ -131,7 +131,7 @@ _spi1_handler:
 .global _reset_
 /*_reset_: 
   bl kernel_main
-  b  sys_exit */
+1: b 1b */
 _reset_: /* dk how correct this is */
 @ Write your boot loader here!
   LDR R0, =_erodata   /* Flash start */
@@ -157,7 +157,7 @@ set_bss:
   B set_bss
 start_kernel:
   bl kernel_main
-  b  sys_exit
+1: b 1b
 
 .thumb_func
 .global _sys_tick_asm_
@@ -167,6 +167,6 @@ _sys_tick_asm_:
 .thumb_func
 .global _svc_asm_handler_
 _svc_asm_handler_:
-  mrs r0, psp             /* build exception stack frame */
+  mrs r0, psp             /* stacked user frame */
   b svc_c_handler
   

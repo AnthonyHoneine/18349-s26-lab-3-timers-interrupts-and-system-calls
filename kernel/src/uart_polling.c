@@ -1,54 +1,38 @@
-#include <unistd.h>
-
+/** @file uart_polling.c @brief Standalone polling USART2 API (Lab 2 compatibility). */
+#include <stdint.h>
 #include <gpio.h>
 #include <rcc.h>
 #include <uart_polling.h>
 
-/** @brief The UART register map. */
-struct uart_reg_map {
-    volatile uint32_t SR;   /**< Status Register */
-    volatile uint32_t DR;   /**<  Data Register */
-    volatile uint32_t BRR;  /**<  Baud Rate Register */
-    volatile uint32_t CR1;  /**<  Control Register 1 */
-    volatile uint32_t CR2;  /**<  Control Register 2 */
-    volatile uint32_t CR3;  /**<  Control Register 3 */
-    volatile uint32_t GTPR; /**<  Guard Time and Prescaler Register */
+struct uart_polling_regs {
+    volatile uint32_t sr, dr, brr, cr1, cr2, cr3, gtpr;
 };
+#define UART2 ((struct uart_polling_regs *)0x40004400u)
+#define UART_CLK 16000000u
+#define UART_UE (1u << 13)
+#define UART_TE (1u << 3)
+#define UART_RE (1u << 2)
+#define UART_TXE (1u << 7)
+#define UART_RXNE (1u << 5)
 
-/** @brief Base address for UART2 */
-#define UART2_BASE  (struct uart_reg_map *) 0x40004400
-
-/** @brief Enable  Bit for UART Config register */
-#define UART_EN (1 << 13)
-
-/**
- * @brief initializes UART to given baud rate with 8-bit word length, 1 stop bit, 0 parity bits
- *
- * @param baud Baud rate
- */
-void uart_polling_init (int baud){
-    (void) baud; /* This line is simply here to suppress the Unused Variable Error. */
-                 /* You should remove this line in your final implementation */
-
-    struct uart_reg_map *uart = UART2_BASE;
-    uart->CR1 |= UART_EN;
-
-    return;
+void uart_polling_init(int baud) {
+    if (baud <= 0) return;
+    struct rcc_reg_map *rcc = RCC_BASE;
+    rcc->apb1_enr |= (1u << 17);
+    (void)rcc->apb1_enr;
+    gpio_init(GPIO_A, 2, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
+    gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
+    UART2->cr1 = 0u;
+    UART2->brr = (UART_CLK + (uint32_t)baud / 2u) / (uint32_t)baud;
+    UART2->cr2 = 0u;
+    UART2->cr3 = 0u;
+    UART2->cr1 = UART_UE | UART_TE | UART_RE;
 }
-
-/**
- * @brief transmits a byte over UART
- *
- * @param c character to be sent
- */
-void uart_polling_put_byte (char c){
-    (void) c;
-    return;
+void uart_polling_put_byte(char c) {
+    while (!(UART2->sr & UART_TXE)) { }
+    UART2->dr = (uint8_t)c;
 }
-
-/**
- * @brief receives a byte over UART
- */
-char uart_polling_get_byte () {
-    return 0;
+char uart_polling_get_byte(void) {
+    while (!(UART2->sr & UART_RXNE)) { }
+    return (char)UART2->dr;
 }

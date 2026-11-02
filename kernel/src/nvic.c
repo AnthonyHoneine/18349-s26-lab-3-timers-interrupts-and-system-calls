@@ -24,7 +24,7 @@ void nvic_irq( uint8_t irq_num, uint8_t status ) {
     return;
   }
 
-  nvic->reg[reg_num] |= ( 0x1 << shift_num );
+  nvic->reg[reg_num] = ( 0x1u << shift_num );
 
   return;
 }
@@ -34,5 +34,5 @@ void nvic_clear_pending( uint8_t irq_num ) {
   uint8_t reg_num = irq_num / NVIC_REG_SIZE;
   struct nvic_t *nvic = NVIC_ICPR_BASE;
 
-  nvic->reg[reg_num] |= ( 0x1 << shift_num );
+  nvic->reg[reg_num] = ( 0x1u << shift_num );
 }

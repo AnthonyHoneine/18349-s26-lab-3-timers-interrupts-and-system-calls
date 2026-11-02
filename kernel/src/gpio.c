@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <gpio.h>
 #include <rcc.h>
 
@@ -44,16 +45,17 @@ void gpio_init(gpio_port port, unsigned int num, unsigned int mode, unsigned int
 
     gpio_reg *gp = gpio_regs[port];  /* Base address of GPIO[port] (A - G) */
 
-    gp->mode |= (mode << (num * BITS_PER_MODE));
-    gp->o_type |= (otype << (num * BITS_PER_TYPE));
-    gp->o_speed |= (speed << (num * BITS_PER_SPEED));
-    gp->pu_pd |= (pupd << (num * BITS_PER_PUPD));
-
-    int high = num >= GPIOS_PER_ALT_REG;        /* Ports 0-7 are in Config Low Reg.
-                                            Ports 8-15 are in Config High Reg */
-
-    int shift_num = num % 8;
-    gp->afr[high] |= (alt << (shift_num * BITS_PER_ALT));
+    /* Reconfiguration must clear the previous bitfield, not only OR in bits. */
+    uint32_t mshift = num * BITS_PER_MODE;
+    uint32_t sshift = num * BITS_PER_SPEED;
+    uint32_t pshift = num * BITS_PER_PUPD;
+    uint32_t ashift = (num % GPIOS_PER_ALT_REG) * BITS_PER_ALT;
+    unsigned int high = num >= GPIOS_PER_ALT_REG;
+    gp->mode = (gp->mode & ~(3u << mshift)) | ((mode & 3u) << mshift);
+    gp->o_type = (gp->o_type & ~(1u << num)) | ((otype & 1u) << num);
+    gp->o_speed = (gp->o_speed & ~(3u << sshift)) | ((speed & 3u) << sshift);
+    gp->pu_pd = (gp->pu_pd & ~(3u << pshift)) | ((pupd & 3u) << pshift);
+    gp->afr[high] = (gp->afr[high] & ~(15u << ashift)) | ((alt & 15u) << ashift);
 }
 
 /*

@@ -1,70 +1,84 @@
-// #include <stdio.h>
-
-// #define UNUSED __attribute__((unused))
-
-// #include <servo.h>
-
-// int main(UNUSED int argc, UNUSED char const *argv[]){
-//   printf("Hello World from User.\n");
-//   return 0;
-// }
+/** @file main.c @brief User-mode text command interface for dual servos. */
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "../../../kernel/include/arm.h"
-#include "../../../kernel/include/syscall.h"
-#include "../../../kernel/include/servok.h"
+#include "../../../kernel/include/svc_num.h"
 
-#define TRUE 1
-#define FALSE 0
-
-#define UNUSED __attribute__((unused))
-
-/** @brief  Executes a fairly long delay. */
-int delay(int status) {
-  int x = 18;
-  for (int i = 0; i < 100000; i++) {
-    x = x + 349;
-  }
-  printf("\nBytes last printed: %d\n", status);
-  return x;
+/* These wrappers issue SVC from unprivileged Thread mode. NEVER call the
+ * kernel's sys_servo_* implementations directly from a user program. */
+static int servo_enable_call(unsigned ch, unsigned on) {
+    register uint32_t r0 __asm("r0") = ch;
+    register uint32_t r1 __asm("r1") = on;
+    __asm volatile ("svc %2" : "+r"(r0) : "r"(r1), "I"(SVC_SERVO_ENABLE) : "r2", "r3", "r12", "memory", "cc");
+    return (int)r0;
+}
+static int servo_set_call(unsigned ch, unsigned angle) {
+    register uint32_t r0 __asm("r0") = ch;
+    register uint32_t r1 __asm("r1") = angle;
+    __asm volatile ("svc %2" : "+r"(r0) : "r"(r1), "I"(SVC_SERVO_SET) : "r2", "r3", "r12", "memory", "cc");
+    return (int)r0;
 }
 
-int main(UNUSED int argc, UNUSED char const *argv[]){
-  char buf[16];
-  // int status;
-  uint8_t channel, angle;
-  printf("Welcome to Servo Controller!\n"
-          "Commands\n"
-          "enable <ch>: Enable servo channel\n"
-          "disable <ch>: Disable servo channel\n"
-          "set <ch> <angle>: Set servo angle\n");
-  fflush(stdout);
-  while( 1 ){
-    printf("> ");
-    fflush(stdout);
-    int len = sys_read(0, buf, sizeof(buf) - 1);
-    if (len > 0) {
-      buf[len] = '\0';
-      
-      if (sscanf(buf, "enable %hhu", &channel) == 1) {
-        if (channel > 1) printf("Invalid command\n");
-        else sys_servo_enable(channel, TRUE);
-      } else if (sscanf(buf, "disable %hhu", &channel) == 1) {
-        if (channel > 1) printf("Invalid command\n");
-        else sys_servo_enable(channel, FALSE);
-      } else if (sscanf(buf, "set %hhu %hhu", &channel, &angle) == 2) {
-        if (angle > 180 || channel > 1) printf("Invalid command\n");
-        else sys_servo_set(channel, angle);
-      } else {
-        printf("Invalid command\n");
-      }
+static const char *skip_spaces(const char *p) {
+    while (*p == ' ' || *p == '\t') ++p;
+    return p;
+}
+static int parse_uint(const char **p, unsigned *out) {
+    const char *s = skip_spaces(*p);
+    unsigned n = 0u;
+    if (*s < '0' || *s > '9') return -1;
+    while (*s >= '0' && *s <= '9') {
+        if (n > 1000u) return -1;
+        n = n * 10u + (unsigned)(*s++ - '0');
     }
-    // status = write(1, "User hello world!\n", 18);
-    // if (status < 18) {
-    //   delay(status);
-    //   printf("argv[1]: %s\n", argv[1]);
-    // }
-    // i++;
-  }
-  return 0;
+    *out = n;
+    *p = s;
+    return 0;
+}
+static int match_word(const char **p, const char *word) {
+    const char *s = skip_spaces(*p);
+    while (*word && *s == *word) { ++s; ++word; }
+    if (*word || (*s != ' ' && *s != '\t')) return -1;
+    *p = s;
+    return 0;
+}
+static int end_line(const char *p) {
+    p = skip_spaces(p);
+    return *p == '\0' || *p == '\r' || *p == '\n';
+}
+
+int main(int argc, const char *argv[]) {
+    (void)argc; (void)argv;
+    char line[64];
+    printf("Welcome to Servo Controller!\nCommands\n"
+           "enable <ch>: Enable servo channel\n"
+           "disable <ch>: Disable servo channel\n"
+           "set <ch> <angle>: Set servo angle\n");
+    fflush(stdout);
+    for (;;) {
+        printf("> ");
+        fflush(stdout);
+        int n = (int)read(0, line, sizeof(line) - 1u);
+        if (n <= 0) continue;
+        line[n] = '\0';
+        const char *p = line;
+        unsigned ch, angle;
+        int result = -1;
+        if (match_word(&p, "enable") == 0 && parse_uint(&p, &ch) == 0 && ch < 2u && end_line(p)) {
+            result = servo_enable_call(ch, 1u);
+        } else {
+            p = line;
+            if (match_word(&p, "disable") == 0 && parse_uint(&p, &ch) == 0 && ch < 2u && end_line(p)) {
+                result = servo_enable_call(ch, 0u);
+            } else {
+                p = line;
+                if (match_word(&p, "set") == 0 && parse_uint(&p, &ch) == 0 && ch < 2u &&
+                    parse_uint(&p, &angle) == 0 && angle <= 180u && end_line(p)) {
+                    result = servo_set_call(ch, angle);
+                }
+            }
+        }
+        if (result != 0) printf("Invalid command\n");
+        fflush(stdout);
+    }
 }

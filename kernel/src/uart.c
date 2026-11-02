@@ -82,7 +82,7 @@ void uart_init(int baud) {
     (void)rcc->apb1_enr; /* Read back after clock enable. */
 
     gpio_init(GPIO_A, 2, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
-    gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_OPEN_DRAIN, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
+    gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
 
     /* Oversampling by 16: BRR is the rounded peripheral clock / baud. */
     u->BRR = (UART_CLOCK_HZ + (uint32_t)baud / 2u) / (uint32_t)baud;
@@ -143,7 +143,11 @@ void USART2_IRQHandler(void) {
     struct uart_reg_map *u = UART2_BASE;
     uint32_t sr = u->SR;
     uint32_t cr1 = u->CR1;
+    /* ORE/FE/NE are cleared by SR followed by DR. Do not leave ORE pending. */
     if ((sr & USART_RXNE) && (cr1 & USART_RXNEIE)) USART2_RX_IRQHandler();
+    else if (sr & ((1u << 3) | (1u << 2) | (1u << 1))) {
+        (void)u->DR;
+    }
     if ((sr & USART_TXE) && (cr1 & USART_TXEIE)) USART2_TX_IRQHandler();
     nvic_clear_pending(USART2_IRQ);
 }
