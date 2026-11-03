@@ -72,8 +72,10 @@ _exit:
   
 .global servo_enable
 servo_enable:
-  bkpt
+  svc SVC_SERVO_ENABLE
+  bx lr
 
 .global servo_set
 servo_set:
-  bkpt
+  svc SVC_SERVO_SET
+  bx lr
