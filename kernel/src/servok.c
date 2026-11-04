@@ -12,8 +12,10 @@ int sys_servo_enable(uint8_t channel, uint8_t enabled) {
        are configured normally; the active flag is one atomic byte store. */
     if (!enabled) {
         servo_active[channel] = 0u;
-        if (channel == 0u) gpio_clr(GPIO_A, 1);
-        else gpio_clr(GPIO_B, 0);
+        if (channel == 0u)
+            gpio_clr(GPIO_A, 1);
+        else
+            gpio_clr(GPIO_B, 0);
     } else {
         servo_active[channel] = 1u;
     }

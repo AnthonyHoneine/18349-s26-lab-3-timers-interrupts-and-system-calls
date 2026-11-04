@@ -13,50 +13,46 @@
 #include <stdint.h>
 
 /* @brief Configuration and Control Register */
-#define CCR ((volatile uint32_t *) 0xE000ED14)
+#define CCR ((volatile uint32_t *)0xE000ED14)
 /* @brief Refister to enable/disable fpu */
-#define CPACR ((volatile uint32_t *) 0xE000ED88)
+#define CPACR ((volatile uint32_t *)0xE000ED88)
 /* @brief FPU control data */
-#define FPCCR ((volatile uint32_t *) 0xE000EF34)
+#define FPCCR ((volatile uint32_t *)0xE000EF34)
 /* @brief Interrupt COntrl and State Register */
-#define ICSR ((volatile uint32_t *) 0xE000ED04)
+#define ICSR ((volatile uint32_t *)0xE000ED04)
 
-#define SHPR2 ((volatile uint32_t *) 0xE000ED1C)
+#define SHPR2 ((volatile uint32_t *)0xE000ED1C)
 
 /**
  * @brief      Disables stack alignement.
  */
-void init_349( void ){
-  // stack alingment
-  *CCR       &= ~(0x1 << 9);
+void init_349(void) {
+    // stack alingment
+    *CCR &= ~(0x1 << 9);
 
-  // Lower SVC handler priority
-  *SHPR2 |= 0x10000000;
+    // Lower SVC handler priority
+    *SHPR2 |= 0x10000000;
 
-  data_sync_barrier();
-  instruction_sync_barrier();
+    data_sync_barrier();
+    instruction_sync_barrier();
 }
 
 /**
  * @brief      Enables the fpu.
  */
-void enable_fpu( void ){
-  *CPACR |= (0xF << 20);
-  *FPCCR |= (0x1 << 31);
-  data_sync_barrier();
-  instruction_sync_barrier();
+void enable_fpu(void) {
+    *CPACR |= (0xF << 20);
+    *FPCCR |= (0x1 << 31);
+    data_sync_barrier();
+    instruction_sync_barrier();
 }
 
 /**
  * @brief      Pends a pendsv.
  */
-void pend_pendsv( void ){
-  *ICSR |= (1 << 28);
-}
+void pend_pendsv(void) { *ICSR |= (1 << 28); }
 
 /**
  * @brief      Clears pendsv.
  */
-void clear_pendsv( void ){
-  *ICSR |= (1 << 27);
-}
+void clear_pendsv(void) { *ICSR |= (1 << 27); }

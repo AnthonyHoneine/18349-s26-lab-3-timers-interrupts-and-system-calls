@@ -42,13 +42,8 @@
  *
  * @return     Returns 0 if allocation was successful, or -1 otherwise.
  */
-void k_malloc_init( UNUSED kmalloc_t* internals,
-                    UNUSED char* heap_low,
-                    UNUSED char* heap_top,
-                    UNUSED uint32_t stack_size,
-                    UNUSED uint32_t unaligned ){
-
-}
+void k_malloc_init(UNUSED kmalloc_t *internals, UNUSED char *heap_low, UNUSED char *heap_top,
+                   UNUSED uint32_t stack_size, UNUSED uint32_t unaligned) {}
 
 /**
  * @brief      This function lets you perform unaligned allocations. If the
@@ -60,10 +55,7 @@ void k_malloc_init( UNUSED kmalloc_t* internals,
  *
  * @return     Returns the pointer to the allocated buffer.
  */
-void* k_malloc_unaligned( UNUSED kmalloc_t* internals,
-                          UNUSED uint32_t size ){
-  return NULL;
-}
+void *k_malloc_unaligned(UNUSED kmalloc_t *internals, UNUSED uint32_t size) { return NULL; }
 
 /**
  * @brief      This function performs aligned allocations.
@@ -72,9 +64,7 @@ void* k_malloc_unaligned( UNUSED kmalloc_t* internals,
  *
  * @return     Pointer to allocated buffer, can be NULL.
  */
-void* k_malloc_aligned( UNUSED kmalloc_t* internals ){
-  return NULL;
-}
+void *k_malloc_aligned(UNUSED kmalloc_t *internals) { return NULL; }
 
 /**
  * @brief      This function allows you to free aligned chunks.
@@ -87,6 +77,4 @@ void* k_malloc_aligned( UNUSED kmalloc_t* internals ){
  *             the buffer as a stack it must be the orignial pointer you
  *             obtained and not the current stack position.
  */
-void k_free( UNUSED kmalloc_t* internals, UNUSED void* buffer ){
-
-}
+void k_free(UNUSED kmalloc_t *internals, UNUSED void *buffer) {}

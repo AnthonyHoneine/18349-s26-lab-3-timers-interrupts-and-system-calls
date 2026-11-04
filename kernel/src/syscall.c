@@ -20,8 +20,7 @@ void *sys_sbrk(int incr) {
 
     int64_t next = (int64_t)heap_break + incr;
 
-    if (next < (uintptr_t)&__heap_low || next > (uintptr_t)&__heap_top)
-        return (void *)-1;
+    if (next < (uintptr_t)&__heap_low || next > (uintptr_t)&__heap_top) return (void *)-1;
 
     void *previous = (void *)heap_break;
     heap_break = next;
@@ -33,7 +32,8 @@ int sys_write(int file, char *ptr, int len) {
     if (file != STDOUT_FILENO || len < 0) return -1;
 
     for (int i = 0; i < len; i++) {
-        while (uart_put_byte(ptr[i]) != 0);
+        while (uart_put_byte(ptr[i]) != 0)
+            ;
     }
     return len;
 }
@@ -46,7 +46,8 @@ int sys_read(int file, char *ptr, int len) {
     char c;
 
     while (n < len) {
-        while (uart_get_byte(&c) != 0);
+        while (uart_get_byte(&c) != 0)
+            ;
 
         // Ignore the LF following a CR from Windows terminals
         if (skip_lf) {
@@ -98,5 +99,6 @@ void sys_exit(int status) {
     lcd_print(&text[i]);
 
     __asm volatile("cpsid i");
-    while (1) __asm volatile("wfi");
+    while (1)
+        __asm volatile("wfi");
 }

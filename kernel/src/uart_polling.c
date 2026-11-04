@@ -29,10 +29,12 @@ void uart_polling_init(int baud) {
     UART2->cr1 = UART_UE | UART_TE | UART_RE;
 }
 void uart_polling_put_byte(char c) {
-    while (!(UART2->sr & UART_TXE)) { }
+    while (!(UART2->sr & UART_TXE)) {
+    }
     UART2->dr = (uint8_t)c;
 }
 char uart_polling_get_byte(void) {
-    while (!(UART2->sr & UART_RXNE)) { }
+    while (!(UART2->sr & UART_RXNE)) {
+    }
     return (char)UART2->dr;
 }

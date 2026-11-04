@@ -15,18 +15,18 @@
 
 #define RCC_USART2EN (1 << 17)
 
-#define USART_UE     (1 << 13)
-#define USART_TE     (1 << 3)
-#define USART_RE     (1 << 2)
+#define USART_UE (1 << 13)
+#define USART_TE (1 << 3)
+#define USART_RE (1 << 2)
 #define USART_RXNEIE (1 << 5)
-#define USART_TXEIE  (1 << 7)
+#define USART_TXEIE (1 << 7)
 
-#define USART_RXNE   (1 << 5)
-#define USART_TXE    (1 << 7)
-#define USART_TC     (1 << 6)
-#define USART_ORE    (1 << 3)
-#define USART_NE     (1 << 2)
-#define USART_FE     (1 << 1)
+#define USART_RXNE (1 << 5)
+#define USART_TXE (1 << 7)
+#define USART_TC (1 << 6)
+#define USART_ORE (1 << 3)
+#define USART_NE (1 << 2)
+#define USART_FE (1 << 1)
 
 #ifndef UART_BUFFER_SIZE
 #define UART_BUFFER_SIZE 1
@@ -72,20 +72,13 @@ static int pop(struct ring *q, uint8_t *c) {
 /* Save and restore interrupt state when accessing shared buffers. */
 static uint32_t irq_save(void) {
     uint32_t mask;
-    __asm volatile(
-        "mrs %0, primask\n"
-        "cpsid i"
-        : "=r"(mask) :: "memory"
-    );
+    __asm volatile("mrs %0, primask\n"
+                   "cpsid i"
+                   : "=r"(mask)::"memory");
     return mask;
 }
 
-static void irq_restore(uint32_t mask) {
-    __asm volatile(
-        "msr primask, %0"
-        :: "r"(mask) : "memory"
-    );
-}
+static void irq_restore(uint32_t mask) { __asm volatile("msr primask, %0" ::"r"(mask) : "memory"); }
 
 void uart_init(int baud) {
     if (baud <= 0) return;
@@ -102,10 +95,8 @@ void uart_init(int baud) {
     tx.head = tx.tail = tx.count = 0;
     rx.head = rx.tail = rx.count = 0;
 
-    gpio_init(GPIO_A, 2, MODE_ALT, OUTPUT_PUSH_PULL,
-              OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
-    gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_PUSH_PULL,
-              OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
+    gpio_init(GPIO_A, 2, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
+    gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
 
     u->BRR = (UART_CLOCK_HZ + baud / 2) / baud;
     u->CR2 = 0;
@@ -201,11 +192,13 @@ void uart_flush(void) {
 
     uint8_t value;
     while (pop(&tx, &value) == 0) {
-        while (!(u->SR & USART_TXE));
+        while (!(u->SR & USART_TXE))
+            ;
         u->DR = value;
     }
 
-    while (!(u->SR & USART_TC));
+    while (!(u->SR & USART_TC))
+        ;
 
     irq_restore(mask);
 }

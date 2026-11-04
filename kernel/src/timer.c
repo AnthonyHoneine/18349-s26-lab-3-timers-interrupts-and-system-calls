@@ -13,38 +13,38 @@ extern volatile uint8_t servo_active[2];
 extern volatile uint8_t servo_angle[2];
 
 struct tim2_5 {
-  volatile uint32_t cr1; /**< 00 Control Register 1 */
-  volatile uint32_t cr2; /**< 04 Control Register 2 */
-  volatile uint32_t smcr; /**< 08 Slave Mode Control */
-  volatile uint32_t dier; /**< 0C DMA/Interrupt Enable */
-  volatile uint32_t sr; /**< 10 Status Register */
-  volatile uint32_t egr; /**< 14 Event Generation */
-  volatile uint32_t ccmr[2]; /**< 18-1C Capture/Compare Mode */
-  volatile uint32_t ccer; /**< 20 Capture/Compare Enable */
-  volatile uint32_t cnt; /**< 24 Counter Register */
-  volatile uint32_t psc; /**< 28 Prescaler Register */
-  volatile uint32_t arr; /**< 2C Auto-Reload Register */
-  volatile uint32_t reserved_1; /**< 30 */
-  volatile uint32_t ccr[4]; /**< 34-40 Capture/Compare */
-  volatile uint32_t reserved_2; /**< 44 */
-  volatile uint32_t dcr; /**< 48 DMA Control Register */
-  volatile uint32_t dmar; /**< 4C DMA address for full transfer Register */
-  volatile uint32_t or; /**< 50 Option Register */
+    volatile uint32_t cr1;        /**< 00 Control Register 1 */
+    volatile uint32_t cr2;        /**< 04 Control Register 2 */
+    volatile uint32_t smcr;       /**< 08 Slave Mode Control */
+    volatile uint32_t dier;       /**< 0C DMA/Interrupt Enable */
+    volatile uint32_t sr;         /**< 10 Status Register */
+    volatile uint32_t egr;        /**< 14 Event Generation */
+    volatile uint32_t ccmr[2];    /**< 18-1C Capture/Compare Mode */
+    volatile uint32_t ccer;       /**< 20 Capture/Compare Enable */
+    volatile uint32_t cnt;        /**< 24 Counter Register */
+    volatile uint32_t psc;        /**< 28 Prescaler Register */
+    volatile uint32_t arr;        /**< 2C Auto-Reload Register */
+    volatile uint32_t reserved_1; /**< 30 */
+    volatile uint32_t ccr[4];     /**< 34-40 Capture/Compare */
+    volatile uint32_t reserved_2; /**< 44 */
+    volatile uint32_t dcr;        /**< 48 DMA Control Register */
+    volatile uint32_t dmar;       /**< 4C DMA address for full transfer Register */
+    volatile uint32_t or ;        /**< 50 Option Register */
 };
 
-struct tim2_5* const timer_base[] = {(void *)0x0,   // N/A - Don't fill out
-                                     (void *)0x0,   // N/A - Don't fill out
-                                     (void *)0x40000000,    // TODO: fill out address for TIMER 2
-                                     (void *)0x40000400,    // TODO: fill out address for TIMER 3
-                                     (void *)0x40000800,    // TODO: fill out address for TIMER 4
-                                     (void *)0x40000C00};   // TODO: fill out address for TIMER 5
+struct tim2_5 *const timer_base[] = {(void *)0x0,         // N/A - Don't fill out
+                                     (void *)0x0,         // N/A - Don't fill out
+                                     (void *)0x40000000,  // TODO: fill out address for TIMER 2
+                                     (void *)0x40000400,  // TODO: fill out address for TIMER 3
+                                     (void *)0x40000800,  // TODO: fill out address for TIMER 4
+                                     (void *)0x40000C00}; // TODO: fill out address for TIMER 5
 
 static const uint8_t timer_irq[] = {0, 0, 28, 29, 30, 50};
 
 #define TIM_CEN (1 << 0)
 #define TIM_UIE (1 << 0)
 #define TIM_UIF (1 << 0)
-#define TIM_UG  (1 << 0)
+#define TIM_UG (1 << 0)
 #define TIM_URS (1 << 2)
 
 #define SERVO_FRAME_US 20000
@@ -52,8 +52,7 @@ static const uint8_t timer_irq[] = {0, 0, 28, 29, 30, 50};
 #define SERVO_DEGREE_US 10
 
 void timer_init(int timer, uint32_t prescalar, uint32_t period) {
-    if (timer < 2 || timer > 5 || prescalar == 0 ||
-        prescalar > 65536 || period == 0) return;
+    if (timer < 2 || timer > 5 || prescalar == 0 || prescalar > 65536 || period == 0) return;
     if ((timer == 3 || timer == 4) && period > 65536) return;
 
     struct rcc_reg_map *rcc = RCC_BASE;
@@ -117,11 +116,15 @@ void tim2_c_handler(void) {
         int a0 = servo_active[0];
         int a1 = servo_active[1];
 
-        if (a0) gpio_set(GPIO_A, 1);
-        else gpio_clr(GPIO_A, 1);
+        if (a0)
+            gpio_set(GPIO_A, 1);
+        else
+            gpio_clr(GPIO_A, 1);
 
-        if (a1) gpio_set(GPIO_B, 0);
-        else gpio_clr(GPIO_B, 0);
+        if (a1)
+            gpio_set(GPIO_B, 0);
+        else
+            gpio_clr(GPIO_B, 0);
 
         if (!a0 && !a1) {
             next_us = SERVO_FRAME_US;
@@ -144,8 +147,10 @@ void tim2_c_handler(void) {
         }
 
     } else if (phase == 1) {
-        if (first_channel == 0) gpio_clr(GPIO_A, 1);
-        else gpio_clr(GPIO_B, 0);
+        if (first_channel == 0)
+            gpio_clr(GPIO_A, 1);
+        else
+            gpio_clr(GPIO_B, 0);
 
         if (second_needed) {
             phase = 2;
@@ -153,8 +158,10 @@ void tim2_c_handler(void) {
         } else {
             // Both channels may have the same pulse width.
             if (servo_active[0] && servo_active[1]) {
-                if (first_channel == 0) gpio_clr(GPIO_B, 0);
-                else gpio_clr(GPIO_A, 1);
+                if (first_channel == 0)
+                    gpio_clr(GPIO_B, 0);
+                else
+                    gpio_clr(GPIO_A, 1);
             }
 
             phase = 0;
@@ -162,8 +169,10 @@ void tim2_c_handler(void) {
         }
 
     } else {
-        if (first_channel == 0) gpio_clr(GPIO_B, 0);
-        else gpio_clr(GPIO_A, 1);
+        if (first_channel == 0)
+            gpio_clr(GPIO_B, 0);
+        else
+            gpio_clr(GPIO_A, 1);
 
         phase = 0;
         next_us = SERVO_FRAME_US - second_width;
@@ -177,14 +186,8 @@ void tim2_c_handler(void) {
     t->cr1 |= TIM_CEN;
 }
 
-void tim3_c_handler(void) {
-    timer_clear_interrupt_bit(3);
-}
+void tim3_c_handler(void) { timer_clear_interrupt_bit(3); }
 
-void tim4_c_handler(void) {
-    timer_clear_interrupt_bit(4);
-}
+void tim4_c_handler(void) { timer_clear_interrupt_bit(4); }
 
-void tim5_c_handler(void) {
-    timer_clear_interrupt_bit(5);
-}
+void tim5_c_handler(void) { timer_clear_interrupt_bit(5); }

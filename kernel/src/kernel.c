@@ -17,10 +17,8 @@ int kernel_main(void) {
     lcd_driver_init();
 
     /* PWM0=PA1, PWM1=PB0: software-generated GPIO signals. */
-    gpio_init(GPIO_A, 1, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL,
-              OUTPUT_SPEED_LOW, PUPD_NONE, 0);
-    gpio_init(GPIO_B, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL,
-              OUTPUT_SPEED_LOW, PUPD_NONE, 0);
+    gpio_init(GPIO_A, 1, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, 0);
+    gpio_init(GPIO_B, 0, MODE_GP_OUTPUT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, 0);
     gpio_clr(GPIO_A, 1);
     gpio_clr(GPIO_B, 0);
 
@@ -28,10 +26,11 @@ int kernel_main(void) {
     timer_init(2, 16, 20000);
     enter_user_mode();
     char c;
-    while(1) {
-         /* enter_user_mode should not return. */
-         if (uart_get_byte(&c) == 0) {
-            while (uart_put_byte(c) != 0);
-         }
+    while (1) {
+        /* enter_user_mode should not return. */
+        if (uart_get_byte(&c) == 0) {
+            while (uart_put_byte(c) != 0)
+                ;
+        }
     }
 }

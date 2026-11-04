@@ -51,25 +51,30 @@ void set_col(int col) {
     gpio_set(KEYPAD_COL3_PORT, KEYPAD_COL3_PIN);
 
     switch (col) {
-        case 1:
-            gpio_clr(KEYPAD_COL1_PORT, KEYPAD_COL1_PIN);
-            break;
-        case 2:
-            gpio_clr(KEYPAD_COL2_PORT, KEYPAD_COL2_PIN);
-            break;
-        case 3:
-            gpio_clr(KEYPAD_COL3_PORT, KEYPAD_COL3_PIN);
-            break;
+    case 1:
+        gpio_clr(KEYPAD_COL1_PORT, KEYPAD_COL1_PIN);
+        break;
+    case 2:
+        gpio_clr(KEYPAD_COL2_PORT, KEYPAD_COL2_PIN);
+        break;
+    case 3:
+        gpio_clr(KEYPAD_COL3_PORT, KEYPAD_COL3_PIN);
+        break;
     }
 }
 
 int read_row(int row) {
     switch (row) {
-        case 1: return gpio_read(KEYPAD_ROW1_PORT, KEYPAD_ROW1_PIN);
-        case 2: return gpio_read(KEYPAD_ROW2_PORT, KEYPAD_ROW2_PIN);
-        case 3: return gpio_read(KEYPAD_ROW3_PORT, KEYPAD_ROW3_PIN);
-        case 4: return gpio_read(KEYPAD_ROW4_PORT, KEYPAD_ROW4_PIN);
-        default: return -1;
+    case 1:
+        return gpio_read(KEYPAD_ROW1_PORT, KEYPAD_ROW1_PIN);
+    case 2:
+        return gpio_read(KEYPAD_ROW2_PORT, KEYPAD_ROW2_PIN);
+    case 3:
+        return gpio_read(KEYPAD_ROW3_PORT, KEYPAD_ROW3_PIN);
+    case 4:
+        return gpio_read(KEYPAD_ROW4_PORT, KEYPAD_ROW4_PIN);
+    default:
+        return -1;
     }
 }
 
@@ -107,8 +112,7 @@ char keypad_read() {
         return '\0';
     }
 
-    if (candidate_key != stable_key &&
-        (uint32_t)(now - candidate_since) >= DEBOUNCE_MS) {
+    if (candidate_key != stable_key && (uint32_t)(now - candidate_since) >= DEBOUNCE_MS) {
         stable_key = candidate_key;
         if (stable_key != '\0') {
             return stable_key;

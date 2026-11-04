@@ -38,20 +38,15 @@ int main(UNUSED int argc, UNUSED const char *argv[]) {
         }
 
         if (strcmp(command, "enable") == 0) {
-            if (sscanf(buf, "%15s %u %c",
-                       command, &channel, &extra) == 2 &&
-                channel < 2) {
+            if (sscanf(buf, "%15s %u %c", command, &channel, &extra) == 2 && channel < 2) {
                 result = servo_enable(channel, 1);
             }
         } else if (strcmp(command, "disable") == 0) {
-            if (sscanf(buf, "%15s %u %c",
-                       command, &channel, &extra) == 2 &&
-                channel < 2) {
+            if (sscanf(buf, "%15s %u %c", command, &channel, &extra) == 2 && channel < 2) {
                 result = servo_enable(channel, 0);
             }
         } else if (strcmp(command, "set") == 0) {
-            if (sscanf(buf, "%15s %u %u %c",
-                       command, &channel, &angle, &extra) == 3 &&
+            if (sscanf(buf, "%15s %u %u %c", command, &channel, &angle, &extra) == 3 &&
                 channel < 2 && angle <= 180) {
                 result = servo_set(channel, angle);
             }

@@ -18,13 +18,13 @@ struct i2c_reg_map {
 };
 
 // Base address of the I2C Register
-#define I2C_BASE (struct i2c_reg_map *) 0x40005400
+#define I2C_BASE (struct i2c_reg_map *)0x40005400
 
 // Sets peripheral clock frequency to 16 MHz
 #define I2C_FREQ (16)
 
 // Hard coded 100kHz clock
-#define I2C_CCR (80) 
+#define I2C_CCR (80)
 
 // Enables I2C1
 #define I2C1_EN (1 << 21)
@@ -59,17 +59,16 @@ struct i2c_reg_map {
 // Shift I2C address over, setting read/write bit
 #define I2C_ADD_SHIFT (1)
 
-
 /**
  * @brief Initializes the I2C protocol. Clk is not used, frequency
  * is hard-coded to 100kHz
  */
-void i2c_master_init(uint16_t clk){
-    (void) clk;
+void i2c_master_init(uint16_t clk) {
+    (void)clk;
 
     struct rcc_reg_map *rcc = RCC_BASE;
     rcc->apb1_enr |= I2C1_EN;
-    
+
     struct i2c_reg_map *i2c = I2C_BASE;
     i2c->CR2 |= I2C_FREQ;
     i2c->CR1 |= I2C_ACK;
@@ -88,7 +87,8 @@ void i2c_master_init(uint16_t clk){
 void i2c_master_start() {
     struct i2c_reg_map *i2c = I2C_BASE;
     i2c->CR1 |= I2C_START; // generate start condition
-    while (!(i2c->SR1 & I2C_SB));
+    while (!(i2c->SR1 & I2C_SB))
+        ;
     return;
 }
 
@@ -97,7 +97,8 @@ void i2c_master_start() {
  */
 void i2c_master_stop() {
     struct i2c_reg_map *i2c = I2C_BASE;
-    while (!((i2c->SR1 & I2C_TXE) && (i2c->SR1 & I2C_BTF)));
+    while (!((i2c->SR1 & I2C_TXE) && (i2c->SR1 & I2C_BTF)))
+        ;
     i2c->CR1 |= I2C_STOP;
     return;
 }
@@ -105,24 +106,26 @@ void i2c_master_stop() {
 /**
  * @brief Sends a value to the specified slave.
  */
-int i2c_master_write(uint8_t *buf, uint16_t len, uint8_t slave_addr){
+int i2c_master_write(uint8_t *buf, uint16_t len, uint8_t slave_addr) {
     i2c_master_start();
     struct i2c_reg_map *i2c = I2C_BASE;
     i2c->DR = (slave_addr << I2C_ADD_SHIFT);
-    while(!(i2c->SR1 & I2C_ADDR)); // ev6
-    (void) i2c->SR2; // read to clear DR
+    while (!(i2c->SR1 & I2C_ADDR))
+        ;           // ev6
+    (void)i2c->SR2; // read to clear DR
     for (uint16_t i = 0; i < len; i++) {
-        while(!(i2c->SR1 & I2C_TXE));
+        while (!(i2c->SR1 & I2C_TXE))
+            ;
         i2c->DR = buf[i];
     }
     i2c_master_stop();
     return 0;
 }
 
-int i2c_master_read(uint8_t *buf, uint16_t len, uint8_t slave_addr){
-    (void) buf;
-    (void) len;
-    (void) slave_addr;
+int i2c_master_read(uint8_t *buf, uint16_t len, uint8_t slave_addr) {
+    (void)buf;
+    (void)len;
+    (void)slave_addr;
 
     return 0;
 }

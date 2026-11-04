@@ -8,11 +8,11 @@
 #include <lcd_driver.h>
 #include <systick.h>
 
-#define LCD_ADDR    (0x4E >> 1)
+#define LCD_ADDR (0x4E >> 1)
 #define INSTRUCTION 0u
-#define DATA        1u
-#define LCD_CLEAR   0x01u
-#define LCD_ENTRY   0x06u
+#define DATA 1u
+#define LCD_CLEAR 0x01u
+#define LCD_ENTRY 0x06u
 #define LCD_DISPLAY_ON 0x0Cu
 #define LCD_FUNCTION_SET 0x28u /* 4-bit, 2 lines, 5x8 font */
 
@@ -36,13 +36,13 @@ void lcd_send_instruction(uint8_t byte, uint8_t rs) {
 
 void lcd_driver_init(void) {
     i2c_master_init(0);
-    systick_delay(40);  /* power-on wait (> 15 ms) */
+    systick_delay(40); /* power-on wait (> 15 ms) */
 
     /* The HD44780 is not yet in 4-bit mode: send single nibbles. */
     lcd_send_nibble(0x30u, INSTRUCTION);
-    systick_delay(5);   /* > 4.1 ms */
+    systick_delay(5); /* > 4.1 ms */
     lcd_send_nibble(0x30u, INSTRUCTION);
-    systick_delay(1);   /* > 100 us */
+    systick_delay(1); /* > 100 us */
     lcd_send_nibble(0x30u, INSTRUCTION);
     systick_delay(1);
     lcd_send_nibble(0x20u, INSTRUCTION); /* enter 4-bit mode */
@@ -68,6 +68,4 @@ void lcd_set_cursor(uint8_t row, uint8_t col) {
     lcd_send_instruction((uint8_t)(0x80u | (row ? 0x40u : 0x00u) | col), INSTRUCTION);
 }
 
-void lcd_clear(void) {
-    lcd_send_instruction(LCD_CLEAR, INSTRUCTION);
-}
+void lcd_clear(void) { lcd_send_instruction(LCD_CLEAR, INSTRUCTION); }
