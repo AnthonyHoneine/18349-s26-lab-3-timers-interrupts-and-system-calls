@@ -1,33 +1,38 @@
-/** @file svc_handler.c @brief Dispatch SVC using hardware-saved PSP frame. */
+/**
+ * @file svc_handler.c
+ * @brief Handles system calls from user mode.
+ */
+
 #include <stdint.h>
 #include <syscall.h>
 #include <svc_num.h>
-#include <debug.h>
 
 void svc_c_handler(uint32_t *frame) {
-    if (!frame) { for (;;) { __asm volatile ("bkpt #0"); } }
-    /* Stacked PC is after the 16-bit Thumb SVC instruction. */
-    uintptr_t pc = (uintptr_t)frame[6];
-    uint16_t instruction = *(const uint16_t *)(pc - 2u);
-    uint8_t number = (uint8_t)(instruction & 0xffu);
-    if ((instruction & 0xff00u) != 0xdf00u) {
-        for (;;) { __asm volatile ("bkpt #0"); }
-    }
-    switch (number) {
+    // Get the SVC number from the instruction before the saved PC
+    uint16_t instruction = *(uint16_t *)(frame[6] - 2);
+    uint8_t svc_num = instruction & 0xFF;
+
+    switch (svc_num) {
         case SVC_SBRK:
-            frame[0] = (uint32_t)sys_sbrk((int32_t)frame[0]); break;
+            frame[0] = (uint32_t)sys_sbrk((int)frame[0]);
+            break;
         case SVC_WRITE:
-            frame[0] = (uint32_t)sys_write((int)frame[0], (char *)frame[1], (int)frame[2]); break;
+            frame[0] = sys_write(frame[0], (char *)frame[1], frame[2]);
+            break;
         case SVC_READ:
-            frame[0] = (uint32_t)sys_read((int)frame[0], (char *)frame[1], (int)frame[2]); break;
+            frame[0] = sys_read(frame[0], (char *)frame[1], frame[2]);
+            break;
         case SVC_EXIT:
-            sys_exit((int)frame[0]); break;
+            sys_exit(frame[0]);
+            break;
         case SVC_SERVO_ENABLE:
-            frame[0] = (uint32_t)sys_servo_enable((uint8_t)frame[0], (uint8_t)frame[1]); break;
+            frame[0] = sys_servo_enable(frame[0], frame[1]);
+            break;
         case SVC_SERVO_SET:
-            frame[0] = (uint32_t)sys_servo_set((uint8_t)frame[0], (uint8_t)frame[1]); break;
+            frame[0] = sys_servo_set(frame[0], frame[1]);
+            break;
         default:
-            frame[0] = (uint32_t)-1;
+            frame[0] = -1;
             break;
     }
 }

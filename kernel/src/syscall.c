@@ -1,4 +1,8 @@
-/** @file syscall.c @brief System calls for the serial console and user heap. */
+/**
+ * @file syscall.c
+ * @brief Kernel implementations of system calls.
+ */
+
 #include <stdint.h>
 #include <unistd.h>
 #include <syscall.h>
@@ -10,81 +14,89 @@ extern char __heap_low;
 extern char __heap_top;
 
 void *sys_sbrk(int incr) {
-    static uintptr_t brk = 0u;
-    uintptr_t lo = (uintptr_t)&__heap_low;
-    uintptr_t hi = (uintptr_t)&__heap_top;
-    if (!brk) brk = (lo + 7u) & ~(uintptr_t)7u;
-    if (brk > hi) return (void *)-1;
-    uintptr_t old = brk;
-    if (incr >= 0) {
-        if ((uintptr_t)incr > hi - brk) return (void *)-1;
-        brk += (uintptr_t)incr;
-    } else {
-        uintptr_t decrease = (uintptr_t)(-(int64_t)incr);
-        if (decrease > brk - ((lo + 7u) & ~(uintptr_t)7u)) return (void *)-1;
-        brk -= decrease;
-    }
-    return (void *)old;
-}
+    static uintptr_t heap_break = 0; // static so it persists
 
-/* UART has higher exception priority than SVC (init_349), so its ISR may
- * preempt these kernel calls and empty/fill the buffers. */
-static void send_byte(char c) {
-    while (uart_put_byte(c) != 0) { /* Await room in TX queue. */ }
+    if (heap_break == 0) heap_break = (uintptr_t)&__heap_low;
+
+    int64_t next = (int64_t)heap_break + incr;
+
+    if (next < (uintptr_t)&__heap_low || next > (uintptr_t)&__heap_top)
+        return (void *)-1;
+
+    void *previous = (void *)heap_break;
+    heap_break = next;
+
+    return previous;
 }
 
 int sys_write(int file, char *ptr, int len) {
-    if (file != 1 || len < 0 || (!ptr && len)) return -1;
-    for (int i = 0; i < len; i++) send_byte(ptr[i]);
+    if (file != STDOUT_FILENO || len < 0) return -1;
+
+    for (int i = 0; i < len; i++) {
+        while (uart_put_byte(ptr[i]) != 0);
+    }
     return len;
 }
 
 int sys_read(int file, char *ptr, int len) {
-    if (file != 0 || len < 0 || (!ptr && len)) return -1;
+    if (file != STDIN_FILENO || len < 0) return -1;
+
+    static int skip_lf = 0;
     int n = 0;
     char c;
-    static uint8_t skip_lf_after_cr = 0u;
+
     while (n < len) {
-        while (uart_get_byte(&c) != 0) { /* Await RX interrupt. */ }
-        if (skip_lf_after_cr) {
-            skip_lf_after_cr = 0u;
+        while (uart_get_byte(&c) != 0);
+
+        // Ignore the LF following a CR from Windows terminals
+        if (skip_lf) {
+            skip_lf = 0;
             if (c == '\n') continue;
         }
-        if (c == 4) return n;
-        if (c == '\b' || c == 127) {
-            if (n) {
-                --n;
-                send_byte('\b'); send_byte(' '); send_byte('\b');
-            }
-            continue;
-        }
-        if (c == '\r' || c == '\n') {
-            skip_lf_after_cr = (c == '\r');
-            ptr[n++] = '\n';
-            send_byte('\r'); send_byte('\n');
+
+        if (c == 4) {
             return n;
+        } else if (c == '\b' || c == 127) {
+            if (n > 0) {
+                n--;
+                sys_write(STDOUT_FILENO, "\b \b", 3);
+            }
+        } else if (c == '\r' || c == '\n') {
+            skip_lf = (c == '\r');
+            ptr[n++] = '\n';
+            sys_write(STDOUT_FILENO, "\r\n", 2);
+            return n;
+        } else {
+            ptr[n++] = c;
+            sys_write(STDOUT_FILENO, &c, 1);
         }
-        ptr[n++] = c;
-        send_byte(c);
     }
+
     return n;
 }
 
 void sys_exit(int status) {
     printk("Program finished with exit code %d\n", status);
     uart_flush();
-    /* Avoid calling printf/snprintf from inside an SVC exception. */
+
+    char text[12];
+    int i = sizeof(text) - 1;
+    text[i] = '\0';
+
+    unsigned value = status;
+    if (status < 0) value = -value;
+    if (value == 0) text[--i] = '0';
+
+    while (value > 0) {
+        text[--i] = '0' + value % 10;
+        value /= 10;
+    }
+
+    if (status < 0) text[--i] = '-';
+
     lcd_clear();
-    char text[16];
-    uint32_t val = (status < 0) ? (uint32_t)(-(int64_t)status) : (uint32_t)status;
-    unsigned n = 0;
-    do { text[n++] = (char)('0' + val % 10u); val /= 10u; } while (val && n < 14u);
-    if (status < 0) text[n++] = '-';
-    char out[16];
-    unsigned i = 0;
-    while (n) out[i++] = text[--n];
-    out[i] = '\0';
-    lcd_print(out);
-    __asm volatile ("cpsid i" ::: "memory");
-    for (;;) __asm volatile ("wfi");
+    lcd_print(&text[i]);
+
+    __asm volatile("cpsid i");
+    while (1) __asm volatile("wfi");
 }
