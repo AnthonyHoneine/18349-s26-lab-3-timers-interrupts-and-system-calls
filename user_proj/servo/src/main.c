@@ -2,6 +2,7 @@
 /** @file main.c @brief User-mode text command interface for dual servos. */
 #include <stdint.h>
 #include <unistd.h>
+#include <stdio.h>
 #include "../../../kernel/include/svc_num.h"
 
 /* These wrappers issue SVC from unprivileged Thread mode. NEVER call the
@@ -68,7 +69,11 @@ int main(int argc, const char *argv[]) {
         "set <ch> <angle>: Set servo angle\n";
 
     write(STDOUT_FILENO, welcome, sizeof(welcome) - 1u);
-
+    // printf("Welcome to Servo Controller!\nCommands\n"
+    //        "enable <ch>: Enable servo channel\n"
+    //        "disable <ch>: Disable servo channel\n"
+    //        "set <ch> <angle>: Set servo angle\n");
+    // fflush(stdout);
     for (;;) {
         write(STDOUT_FILENO, "> ", 2);
 

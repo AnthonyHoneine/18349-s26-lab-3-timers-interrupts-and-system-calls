@@ -27,5 +27,11 @@ int kernel_main(void) {
     /* TIM2: 1MHz counter; ISR schedules each PWM edge dynamically. */
     timer_init(2, 16, 20000);
     enter_user_mode();
-    for (;;) { /* enter_user_mode should not return. */ }
+    char c;
+    while(1) {
+         /* enter_user_mode should not return. */
+         if (uart_get_byte(&c) == 0) {
+            while (uart_put_byte(c) != 0);
+         }
+    }
 }

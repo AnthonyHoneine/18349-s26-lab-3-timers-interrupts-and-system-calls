@@ -7,7 +7,6 @@
 
 extern volatile uint8_t servo_active[2];
 extern volatile uint8_t servo_angle[2];
-
 struct tim2_5 {
     volatile uint32_t cr1, cr2, smcr, dier, sr, egr;
     volatile uint32_t ccmr[2], ccer, cnt, psc, arr, reserved_1;
@@ -23,6 +22,7 @@ static const uint8_t timer_irq[] = {0u, 0u, 28u, 29u, 30u, 50u};
 #define TIM_UIE  (1u << 0)
 #define TIM_UIF  (1u << 0)
 #define TIM_UG   (1u << 0)
+#define TIM_URS (1u << 2)
 #define SERVO_FRAME_US 20000u
 #define SERVO_MIN_US 600u
 
@@ -34,7 +34,7 @@ void timer_init(int timer, uint32_t prescalar, uint32_t period) {
     rcc->apb1_enr |= (1u << (timer - 2));
     (void)rcc->apb1_enr;
     struct tim2_5 *t = timer_base[timer];
-    t->cr1 = 0u;
+    t->cr1 = TIM_URS;
     t->dier = 0u;
     t->psc = prescalar - 1u;
     t->arr = period - 1u;
@@ -44,17 +44,17 @@ void timer_init(int timer, uint32_t prescalar, uint32_t period) {
     nvic_clear_pending(timer_irq[timer]);
     nvic_irq(timer_irq[timer], IRQ_ENABLE);
     t->dier = TIM_UIE;
-    t->cr1 = TIM_CEN;
+    t->cr1 = TIM_CEN | TIM_URS;
 }
 
 void timer_disable(int timer) {
     if (timer < 2 || timer > 5) return;
+    struct rcc_reg_map *rcc = RCC_BASE;
+    rcc->apb1_enr &= ~(1u << (timer - 2));
     struct tim2_5 *t = timer_base[timer];
     t->dier &= ~TIM_UIE;
     t->cr1 &= ~TIM_CEN;
     nvic_irq(timer_irq[timer], IRQ_DISABLE);
-    struct rcc_reg_map *rcc = RCC_BASE;
-    rcc->apb1_enr &= ~(1u << (timer - 2));
 }
 
 void timer_clear_interrupt_bit(int timer) {

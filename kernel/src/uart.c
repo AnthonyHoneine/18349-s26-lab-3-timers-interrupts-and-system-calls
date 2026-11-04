@@ -70,16 +70,16 @@ static void irq_restore(uint32_t mask) {
 }
 
 void uart_init(int baud) {
+    struct rcc_reg_map *rcc = RCC_BASE;
+    rcc->apb1_enr |= RCC_USART2EN;
+    (void)rcc->apb1_enr; /* Read back after clock enable. */    
+    
     struct uart_reg_map *u = UART2_BASE;
     if (baud <= 0) return;
     nvic_irq(USART2_IRQ, IRQ_DISABLE);
     u->CR1 = 0u;
     tx.head = tx.tail = tx.count = 0u;
     rx.head = rx.tail = rx.count = 0u;
-
-    struct rcc_reg_map *rcc = RCC_BASE;
-    rcc->apb1_enr |= RCC_USART2EN;
-    (void)rcc->apb1_enr; /* Read back after clock enable. */
 
     gpio_init(GPIO_A, 2, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
     gpio_init(GPIO_A, 3, MODE_ALT, OUTPUT_PUSH_PULL, OUTPUT_SPEED_LOW, PUPD_NONE, ALT7);
@@ -106,7 +106,7 @@ int uart_put_byte(char c) {
 }
 
 int uart_get_byte(char *c) {
-    if (c == 0) return -1;
+    if (c == NULL) return -1;
     struct uart_reg_map *u = UART2_BASE;
     uint8_t value;
     uint32_t mask = irq_save();
