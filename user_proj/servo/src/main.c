@@ -61,18 +61,18 @@ int main(int argc, const char *argv[]) {
 
     char line[64];
 
-    static const char welcome[] =
-        "Welcome to Servo Controller!\n"
-        "Commands\n"
-        "enable <ch>: Enable servo channel\n"
-        "disable <ch>: Disable servo channel\n"
-        "set <ch> <angle>: Set servo angle\n";
+    // static const char welcome[] =
+    //     "Welcome to Servo Controller!\n"
+    //     "Commands\n"
+    //     "enable <ch>: Enable servo channel\n"
+    //     "disable <ch>: Disable servo channel\n"
+    //     "set <ch> <angle>: Set servo angle\n";
 
-    write(STDOUT_FILENO, welcome, sizeof(welcome) - 1u);
-    // printf("Welcome to Servo Controller!\nCommands\n"
-    //        "enable <ch>: Enable servo channel\n"
-    //        "disable <ch>: Disable servo channel\n"
-    //        "set <ch> <angle>: Set servo angle\n");
+    // write(STDOUT_FILENO, welcome, sizeof(welcome) - 1u);
+    printf("Welcome to Servo Controller!\nCommands\n"
+           "enable <ch>: Enable servo channel\n"
+           "disable <ch>: Disable servo channel\n"
+           "set <ch> <angle>: Set servo angle\n");
     // fflush(stdout);
     for (;;) {
         write(STDOUT_FILENO, "> ", 2);

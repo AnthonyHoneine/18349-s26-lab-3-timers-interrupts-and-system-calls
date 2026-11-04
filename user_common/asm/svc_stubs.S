@@ -34,11 +34,13 @@ _close:
 
 .global _fstat
 _fstat:
-  bkpt
+  svc SVC_FSTAT
+  bx lr
 
 .global _isatty
 _isatty:
-  bkpt
+  svc SVC_ISATTY
+  bx lr
 
 .global _lseek
 _lseek:

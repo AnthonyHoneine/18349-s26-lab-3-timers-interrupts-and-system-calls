@@ -136,7 +136,7 @@ _reset_: /* dk how correct this is */
 @ Write your boot loader here!
   LDR R0, =_erodata   /* Flash start */
   LDR R1, =_k_data    /* SRAM start */
-  LDR R2, =_u_data    /* SRAM end */
+  LDR R2, =_u_edata    /* SRAM end */
 copy_flash:
   CMP R1, R2          /* check if we are at the end */
   BHS bss_init
